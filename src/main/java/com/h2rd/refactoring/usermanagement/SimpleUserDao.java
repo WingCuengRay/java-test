@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Component;
 
+@Component
 public class SimpleUserDao implements UserRepository {
     private static final int MINIMUM_NUM_OF_ROLE = 1;
 
@@ -22,7 +24,7 @@ public class SimpleUserDao implements UserRepository {
         userList.add(user);
     }
 
-    public List<User> getUserList() {
+    public List<User> getAllUsers() {
         List<User> copy = new ArrayList<>(userList.size());
         synchronized (userList){
             copy.addAll(userList);
@@ -46,7 +48,7 @@ public class SimpleUserDao implements UserRepository {
     }
 
     public void updateUser(User userToUpdate) {
-        if(isValidUser(userToUpdate)){
+        if(!isValidUser(userToUpdate) || !isUserExist(userToUpdate)){
             throw new IllegalArgumentException("Invalid user information to update");
         }
 
@@ -62,11 +64,11 @@ public class SimpleUserDao implements UserRepository {
     }
 
     public User findUserByEmail(String email) {
-        User target = null;
-        if(email == null || email.trim().length() == 0){
+        if(StringUtils.isBlank(email)){
             return null;
         }
 
+        User target = null;
         synchronized (userList) {
             for(User each: userList) {
                 if(each.getEmail().equals(email)) {
