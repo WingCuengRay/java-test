@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import javax.ws.rs.core.Response;
-import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -32,10 +31,10 @@ public class UserResourceUnitTest {
         user.setName("fake user");
         user.setEmail("fake@user.com");
         user.setRoles(EnumSet.of(Role.ADMIN, Role.MASTER));
-        Mockito.when(userDao.getUserList()).thenReturn(Arrays.asList(user));
+        Mockito.when(userDao.getAllUsers()).thenReturn(Arrays.asList(user));
 
-        Response response = userResource.getUsers();
-        Assert.assertEquals(200, response.getStatus());
+        Response response = userResource.getAllUsers();
+        assertEquals(200, response.getStatus());
     }
 
     @Test

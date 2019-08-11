@@ -1,68 +1,71 @@
 package test.com.h2rd.refactoring.integration;
 
 import static org.junit.Assert.assertEquals;
-
 import com.h2rd.refactoring.usermanagement.User;
 import com.h2rd.refactoring.usermanagement.User.Role;
-import com.h2rd.refactoring.web.UserResource;
-import com.sun.jersey.api.client.GenericType;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.core.DefaultResourceConfig;
-import com.sun.jersey.spi.container.servlet.WebComponent;
-import com.sun.jersey.test.framework.JerseyTest;
-import com.sun.jersey.test.framework.WebAppDescriptor;
-import com.sun.jersey.test.framework.spi.container.TestContainerFactory;
-import com.sun.jersey.test.framework.spi.container.grizzly2.web.GrizzlyWebTestContainerFactory;
 import java.util.EnumSet;
 import java.util.List;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import org.glassfish.jersey.test.DeploymentContext;
+import org.glassfish.jersey.test.JerseyTest;
+import org.glassfish.jersey.test.ServletDeploymentContext;
+import org.glassfish.jersey.test.grizzly.GrizzlyWebTestContainerFactory;
+import org.glassfish.jersey.test.spi.TestContainerFactory;
 import org.junit.Test;
+import org.springframework.web.context.ContextLoaderListener;
 
 public class UserIntegrationTest extends JerseyTest {
-
-  public static class AppConfig extends DefaultResourceConfig {
-    public AppConfig() {
-      super(UserResource.class);
-    }
-  }
-
   @Override
   protected TestContainerFactory getTestContainerFactory() {
     return new GrizzlyWebTestContainerFactory();
   }
 
   @Override
-  public WebAppDescriptor configure() {
-    return new WebAppDescriptor.Builder()
-        .initParam(WebComponent.RESOURCE_CONFIG_CLASS,
-            AppConfig.class.getName())
+  protected DeploymentContext configureDeployment(){
+    return ServletDeploymentContext
+        .forPackages("com.h2rd.refactoring")
+        .addListener(ContextLoaderListener.class)
+        .contextParam("contextConfigLocation", "classpath:application-config.xml")
         .build();
   }
 
   @Test
   public void integrationTest() {
     User user = new User("fake user", "fake@user.com", EnumSet.of(Role.ADMIN, Role.MASTER));
-    WebResource resource = resource().path("users/add");
-    User newUser = resource.type(MediaType.APPLICATION_XML_TYPE).post(User.class, user);
-    assertEquals(user, newUser);
+    Response response = target("users/add").request().post(Entity.entity(user, MediaType.APPLICATION_XML_TYPE));
+    assertEquals(200, response.getStatus());
+    User responseUser = response.readEntity(User.class);
+    assertEquals(user, responseUser);
 
-    resource = resource().path("users/find");
-    List<User> listOfUser = resource.type(MediaType.APPLICATION_XML_TYPE).get(new GenericType<List<User>>() {});
-    assertEquals(1, listOfUser.size());
-    assertEquals(user, listOfUser.get(0));
+    response = target("users/find").request().get();
+    assertEquals(200, response.getStatus());
+    List<User> responseUserList = response.readEntity(new GenericType<List<User>>(){});
+    assertEquals(1, responseUserList.size());
+    assertEquals(user, responseUserList.get(0));
 
-    resource = resource().path("users/search").queryParam("name", "fake user");
-    listOfUser = resource.type(MediaType.APPLICATION_XML_TYPE).get(new GenericType<List<User>>() {});
-    assertEquals(1, listOfUser.size());
-    assertEquals(user, listOfUser.get(0));
+    user.setName("Real user");
+    response = target("users/update").request().post(Entity.entity(user, MediaType.APPLICATION_XML_TYPE));
+    assertEquals(200, response.getStatus());
+    responseUser = response.readEntity(User.class);
+    assertEquals(user, responseUser);
 
-    resource = resource().path("users/delete");
-    User deletedUser = resource.type(MediaType.APPLICATION_XML_TYPE).post(User.class, user);
-    assertEquals(user, deletedUser);
+    response = target("users/search").queryParam("name", "Real user").request().get();
+    assertEquals(200, response.getStatus());
+    responseUserList = response.readEntity(new GenericType<List<User>>(){});
+    assertEquals(1, responseUserList.size());
+    assertEquals(user, responseUserList.get(0));
 
-    resource = resource().path("users/find");
-    listOfUser = resource.type(MediaType.APPLICATION_XML_TYPE).get(new GenericType<List<User>>() {});
-    assertEquals(0, listOfUser.size());
+    response = target("users/delete").request().post(Entity.entity(user, MediaType.APPLICATION_XML_TYPE));
+    assertEquals(200, response.getStatus());
+    responseUser = response.readEntity(User.class);
+    assertEquals(user, responseUser);
+
+    response = target("users/find").request().get();
+    assertEquals(200, response.getStatus());
+    responseUserList = response.readEntity(new GenericType<List<User>>(){});
+    assertEquals(0, responseUserList.size());
   }
-
 }
